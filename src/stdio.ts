@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import { GlymptApiClient } from "./api-client.js";
 import { loadApiConfig } from "./config.js";

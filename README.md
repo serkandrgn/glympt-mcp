@@ -2,9 +2,63 @@
 
 Glympt MCP exposes paid technographic enrichment, filtered prospect search, saved lists and CSV snapshots through the official TypeScript SDK v2. It supports the stateless 2026-07-28 protocol and the SDK’s 2025-11-25 compatibility mode.
 
-Both connection paths are implemented locally: API-key stdio for developer clients, and hosted OAuth with explicit Glympt workspace consent. Hosted release verification is still pending; no public endpoint or individual host application is claimed as verified.
+Both connection paths are implemented: API-key stdio for developer clients, and hosted OAuth with explicit Glympt workspace consent. Production API-key workflows, hosted OAuth discovery/refresh/disconnect, and actual ChatGPT, Claude web and Codex usage calls have been verified. Cursor desktop 3.23.12 also passed OAuth, 14-tool discovery and an actual usage call after the loopback registration fix was deployed. Claude Code remains unverified.
 
-## Build and verify
+## Hosted OAuth
+
+Add this Streamable HTTP URL to a client that supports OAuth:
+
+```text
+https://mcp.glympt.com/mcp
+```
+
+Sign into Glympt, choose an API-enabled paid workspace and consent to the requested scopes. Each client receives its own workspace authorization. Disconnect it under **Account settings → MCP connections** to revoke its access and refresh tokens.
+
+Hosted OAuth requires no local installation or customer API key. Start with “Show my Glympt query balance and workspace limits.” See the [public setup guide](https://glympt.com/docs/mcp) for client-specific steps and current verification limits.
+
+## Local stdio adapter
+
+Requires Node.js 22 or newer. Create a scoped API key in [Glympt API key settings](https://glympt.com/dashboard/user/api-keys) for an API-enabled paid workspace. Pro, Business and eligible custom plans support API access. Free CSV trial credits do not grant API or MCP access.
+
+Put `GLYMPT_API_KEY` in the server process environment using your client's private credential settings, then run:
+
+```sh
+npx --yes @glympt/mcp@0.1.0
+```
+
+The executable is `glympt-mcp`. For an explicit persistent installation:
+
+```sh
+npm install --global @glympt/mcp@0.1.0
+glympt-mcp
+```
+
+A typical stdio client configuration is:
+
+```json
+{
+  "mcpServers": {
+    "glympt": {
+      "command": "npx",
+      "args": ["--yes", "@glympt/mcp@0.1.0"],
+      "env": {
+        "GLYMPT_API_KEY": "tk_live_replace_with_your_key"
+      }
+    }
+  }
+}
+```
+
+The placeholder is not a working credential. Store real keys only in private local configuration, never in shared repositories or chat prompts. The package does not automatically read `.env` files. Revoke the dashboard key to disconnect this adapter.
+
+| Variable              | Required | Default                  | Purpose                                                    |
+| --------------------- | -------- | ------------------------ | ---------------------------------------------------------- |
+| `GLYMPT_API_KEY`      | Yes      | None                     | Scoped paid-workspace API key                              |
+| `GLYMPT_API_BASE_URL` | No       | `https://api.glympt.com` | HTTPS API origin; HTTP loopback is allowed for development |
+
+Missing configuration exits with a useful error on stderr. Runtime diagnostics use stderr; stdout carries MCP protocol messages only. No `tsx`, source checkout or development dependencies are required to run the npm package. [Detailed stdio setup](https://github.com/serkandrgn/glympt-mcp/blob/main/docs/client-setup.md).
+
+## Build and verify from source
 
 Requires Node.js 22+ and pnpm 10.28.2.
 
@@ -14,35 +68,12 @@ pnpm check
 pnpm lint
 pnpm test
 pnpm build
+pnpm test:package
 ```
 
-Tests use a mock paid API and real SDK clients. The socket integration test needs permission to open loopback ports in restricted environments. SDK compatibility does not establish compatibility with every host or verify a production credit ledger.
+Tests use a mock paid API and real SDK clients. Socket tests need loopback access in restricted environments. Package verification inspects the actual tarball, installs only production dependencies into a clean temporary directory, and checks the installed executable and npx command under modern and legacy protocols. These tests spend no production credits.
 
-## Developer connection
-
-Create an API key in the [Glympt dashboard](https://glympt.com/dashboard/user/api-keys) for an API-enabled paid workspace. The default key includes all five product scopes. Free CSV trial credits do not grant API or MCP access.
-
-Build the package, then launch `node /absolute/path/to/mcp/dist/stdio.js` with `GLYMPT_API_KEY` in its environment. `GLYMPT_API_BASE_URL` defaults to `https://api.glympt.com`. See [client setup](docs/client-setup.md) for Codex, Cursor and Claude Code examples.
-
-For direct use, copy `.env.example` to `.env` and run:
-
-```sh
-node --env-file=.env dist/stdio.js
-```
-
-The package does not automatically load `.env`. Process diagnostics use stderr; stdout contains only MCP messages. Keep real keys in private client settings or environment files.
-
-The separate loopback runner uses `node --env-file=.env dist/http.js` at `http://127.0.0.1:3100/mcp`, with a distinct `GLYMPT_MCP_LOCAL_TOKEN` bearer secret of at least 32 characters. It binds to loopback and represents one API-key owner. Hosted multi-user connections use the OAuth runner below.
-
-## Hosted connection
-
-The hosted runner is `node dist/hosted.js`, or `pnpm start:hosted`. It serves `/mcp`, protected-resource discovery and `/health`. Configure it from `.env.hosted.example`; it needs the public API origin, its exact public `/mcp` resource URL and the backend’s gateway secret. It has no customer API key, database, Redis, Stripe or worker credentials.
-
-Users authenticate with Glympt, select an eligible paid workspace and explicitly consent to the requested scopes. Access tokens are limited to this MCP resource and last 15 minutes; optional refresh access lasts 30 days. The gateway exchanges the resource token with its issuer for a distinct API delegation lasting at most 60 seconds. The backend rechecks the original grant, session, membership, role, scopes and paid entitlements on each tool request.
-
-Users can disconnect a client under **Account settings → MCP connections**. This revokes its issued access and refresh tokens for that workspace and removes saved consent. API-key clients instead revoke their dashboard API key.
-
-See [deployment and verification](docs/deployment.md) before enabling the public endpoint. The Dockerfile builds only this package. `/health` checks process readiness, not worker, billing or upstream availability.
+The npm file allowlist includes the compiled stdio adapter, public setup docs, license and Registry metadata. Hosted gateway runners and deployment configuration are available only in this source repository. The Dockerfile still builds the hosted service with `node dist/hosted.js`; see [deployment](https://github.com/serkandrgn/glympt-mcp/blob/main/docs/deployment.md).
 
 ## Tools and credits
 
@@ -78,9 +109,10 @@ Technology filters use slugs such as `shopify`, `wordpress` and `cloudflare`. Pa
 - Local SDK tests cover all 14 tools under modern and legacy revisions, executable stdio, per-request hosted identity isolation, scopes, bounded responses and credential redaction.
 - Fresh isolated migrations through 0041, 230 backend unit tests, 15 OAuth/API workflow tests, 112 existing backend regressions and 27 credit recovery checks pass.
 - The frontend production build and local browser sign-in, workspace consent, PKCE exchange and disconnect verification pass.
-- Public HTTPS staging, Docker image build and actual ChatGPT/Claude/Codex/Cursor client connections remain pending. No production deployment or registry publication has been completed.
+- Production API-key stdio verification passes: all 14 tools invoked with SDK protocol 2026-07-28, a legacy 2025-11-25 connection, a real worker scan, duplicate/replay billing, saved lists, CSV chunk reconstruction and a DNS-failure refund. The test used two net query credits.
+- The Docker/Coolify deployment is live. Hosted OAuth discovers 14 tools under both protocol revisions, refresh rotation passes, and disconnected Codex access/refresh tokens are rejected. Actual ChatGPT, Claude web and Codex clients completed read-only usage checks on 2026-10-04 without query charges. Cursor desktop 3.23.12 also passed OAuth, 14-tool discovery and an actual usage call after the loopback registration fix was deployed. Claude Code remains unverified.
 
-Track acceptance in [the implementation plan](docs/implementation-plan.md). Client UI, experimental Tasks, automatic background polling, arbitrary HTTP fetching and direct database access remain outside this release.
+Track acceptance in [the implementation plan](https://github.com/serkandrgn/glympt-mcp/blob/main/docs/implementation-plan.md). Client UI, experimental Tasks, automatic background polling, arbitrary HTTP fetching and direct database access remain outside this release.
 
 ## Protocol references
 
@@ -89,3 +121,11 @@ Track acceptance in [the implementation plan](docs/implementation-plan.md). Clie
 - [SDK HTTP handler](https://ts.sdk.modelcontextprotocol.io/v2/serving/http.html)
 - [SDK legacy compatibility](https://ts.sdk.modelcontextprotocol.io/v2/serving/legacy-clients.html)
 - [SDK authorization](https://ts.sdk.modelcontextprotocol.io/v2/serving/authorization.html)
+
+## Distribution
+
+Registry metadata is in `server.json`. See the [distribution status](https://github.com/serkandrgn/glympt-mcp/blob/main/docs/distribution.md) for verified public entries and directory submissions.
+
+## License
+
+The MCP adapter is MIT licensed; see [LICENSE](https://github.com/serkandrgn/glympt-mcp/blob/main/LICENSE). Access to the Glympt service remains subject to your workspace subscription, scopes and the service terms.

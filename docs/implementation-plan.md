@@ -53,7 +53,7 @@ Apply the account-wide request allowance to polling/read routes too, and confirm
 
 Run against an isolated staging paid workspace: cached lookup, fresh scan, duplicate batch, lost response/replay, concurrent replay, changed-payload conflict, last-credit replay, technical failure/refund, insufficient credits, downgraded plan, revoked key/token and foreign-workspace identifiers. Compare ledger totals to backend outcomes. Exercise initial supported client applications directly rather than assuming SDK compatibility implies host compatibility.
 
-The earlier production API billing checks passed. The frontend terminal-progress/results polling patch is now committed as `493ecd6`; this MCP milestone has not checked its deployment. It does not affect this adapter. No production MCP billing test has yet been performed.
+The earlier production API billing checks passed. Production MCP API-key acceptance also passed on 2026-10-04: a real worker scan, duplicate batch, stable-key replays and conflicts, list/export replay, exact CSV chunks and a DNS-failure refund used two net query credits. Full isolated billing/tenancy coverage remains separate from this small production run.
 
 ## Milestone 4 — release
 
@@ -65,12 +65,12 @@ MCP Apps/UI, arbitrary code execution, generic HTTP-fetch tools, agent messaging
 
 ## Implementation status — 2026-10-04
 
-| Milestone                         | Source status                                                          | Acceptance status                                                             |
-| --------------------------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| 1. Developer connection           | Implemented                                                            | All 24 local transport/SDK tests pass; actual host applications pending       |
-| 2. Hosted OAuth and API workflows | Implemented                                                            | Isolated migrations, OAuth/workflow tests and browser consent/disconnect pass |
-| 3. Staging billing and clients    | Local billing and tenancy verified                                     | Public HTTPS staging and actual host connections pending                      |
-| 4. Release                        | Dockerfile, environment examples, health probe and setup docs prepared | Docker image build, reviewed production configuration and deployment pending  |
+| Milestone                         | Source status                                                        | Acceptance status                                                                                |
+| --------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| 1. Developer connection           | Implemented                                                          | Local tests and production stdio workflows pass; actual Codex, ChatGPT and Claude web usage pass |
+| 2. Hosted OAuth and API workflows | Implemented                                                          | Isolated migrations, OAuth/workflow tests and browser consent/disconnect pass                    |
+| 3. Staging billing and clients    | Local billing/tenancy and small production API-key workflow verified | Hosted OAuth and actual Codex/ChatGPT/Claude web/Cursor usage pass                               |
+| 4. Release                        | Docker/Coolify deployment is live                                    | Hosted authorization/refresh/disconnect pass; registry publication pending                       |
 
 Fourteen tools cover enrichment, polling, filtered database search, usage, saved lists and CSV snapshots. Backend contracts enforce scopes and workspace ownership. List/export operations have durable replay; list quotas serialize concurrent writes; export completion and audit commit atomically. CSV downloads use bounded authenticated base64 chunks and formula protection.
 
@@ -86,10 +86,14 @@ Verification evidence:
 - 112 existing backend regression cases passed across the HTTP and database runs. Another 26 durable credit recovery cases and the real BullMQ timeout/retry/exhaustion recovery case pass.
 - The frontend production build passes. Browser sign-in, explicit paid workspace selection, scope review, consent callback/PKCE exchange and account-settings disconnect passed against disposable local fixtures. Authorization left all 500 credits untouched; disconnected access returns 401 and refresh returns invalid_grant.
 
-The earlier socket approval problem is resolved. These checks used a separate localhost API, frontend, test database and Redis namespace. Production was not migrated or deployed. Test runner setup and the detailed evidence are recorded in the workspace audit `audits/2026-10-04-mcp-implementation-verification.md`.
+Local acceptance used an isolated API, frontend, test database and Redis namespace. Detailed test artifacts remain in the private application workspace.
 
-Remaining acceptance requires a reachable HTTPS staging endpoint and a paid staging workspace, already requested from the user. Actual ChatGPT/Claude/Codex/Cursor applications remain unverified; SDK compatibility is not a substitute. Docker is unavailable on this host, so the image build remains an external verification step. Registry publication follows successful hosted acceptance.
+Since those local checks, the user deployed the services to production. Coolify MCP routing was corrected to preserve the whole hostname and use internal port 3100. Misnamed backend environment entries were corrected while preserving their existing values. Public MCP health, protected-resource metadata and backend authorization-server discovery now pass.
 
-The goal is blocked awaiting external staging setup. Next: verify the reviewed artifact on public staging in the first-release clients, build the image, review concrete production configuration and deploy the accepted release.
+Production API-key acceptance used the official SDK client and the real production API/worker. All 14 tools were invoked under the modern protocol. Legacy discovery and usage also passed. The run spent two net query credits; reads, list/export operations and retries added no query charges, and a deliberate DNS failure was refunded. Detailed results and the export remain private. A runner response-wrapper assumption was corrected without product changes and without new operation keys.
+
+Production hosted acceptance now passes modern/legacy discovery (14 tools), usage, refresh rotation and Codex settings disconnect. Codex CLI 0.160.0, ChatGPT Plus web and Claude Free web completed actual get_usage calls. A CIMD extension initialization bug was fixed and its regression proved against the old code. Cursor desktop 3.23.12 also passed OAuth, 14-tool discovery and an actual usage call after the loopback registration fix was deployed. Claude Code remains unverified. Actual application checks cover OAuth/usage, not every workflow. Registry publication follows successful hosted acceptance. Full adversarial billing and tenancy cases are verified in isolated tests; this small production run does not repeat the entire matrix.
 
 See [deployment](deployment.md) and [client setup](client-setup.md) for configuration and the compatibility matrix.
+
+The public promotion page `/mcp` and setup guide `/docs/mcp` are deployed, have canonical metadata, appear in the sitemap and are allowed by robots. Internal consent pages remain excluded. Detailed hosted acceptance artifacts remain private.

@@ -1,6 +1,6 @@
 # Hosted MCP deployment and acceptance
 
-Prepared 2026-10-04. Source and deployment files are reviewable locally. Fresh isolated migrations, backend regressions and the browser consent/disconnect flow have passed. Public hosted-client checks and a Docker image build remain pending.
+Updated 2026-10-04. Fresh isolated migrations, backend regressions and the local browser consent/disconnect flow have passed. Docker/Coolify production deployment, public health/discovery and the production API-key MCP workflow are verified. Public hosted OAuth discovery, refresh and Codex disconnect now pass, as do actual ChatGPT, Claude web and Codex usage calls. Cursor desktop 3.23.12 also passed OAuth, 14-tool discovery and an actual usage call after the loopback registration fix was deployed. Claude Code remains unverified.
 
 ## Services and configuration
 
@@ -15,7 +15,7 @@ Deploy three independently built services: Glympt backend, frontend and this MCP
 | `API_BASE_URL`          | Public backend origin; OAuth issuer is this origin plus `/api/auth`                        |
 | `WEB_APP_URL`           | Frontend origin hosting login, workspace selection and consent                             |
 
-Keep `BETTER_AUTH_URL`, trusted web origins, CORS and existing session-cookie configuration consistent with the staging origins. Preserve the production SEO credential separately. Generate each new secret independently with `openssl rand -hex 32`; do not put generated values into documentation or version control.
+Keep `BETTER_AUTH_URL`, trusted web origins, CORS and existing session-cookie configuration consistent with the staging origins. Generate each new secret independently with `openssl rand -hex 32`; do not put generated values into documentation or version control.
 
 | MCP variable                 | Purpose                                                                |
 | ---------------------------- | ---------------------------------------------------------------------- |
@@ -26,6 +26,8 @@ Keep `BETTER_AUTH_URL`, trusted web origins, CORS and existing session-cookie co
 | `GLYMPT_MCP_ALLOWED_ORIGINS` | Optional exact browser origins, comma-separated; no paths or wildcards |
 
 No customer API key belongs in the hosted service environment. The consent frontend uses its existing API-origin configuration; it needs none of these secrets.
+
+The backend uses `MCP_RESOURCE_URL` and `MCP_GATEWAY_SECRET`; only the MCP service uses the `GLYMPT_` prefix. Copying the MCP service's variable names into the backend leaves the required backend settings absent and causes startup validation to fail when `MCP_ENABLED=true`.
 
 ## Rollout order
 
@@ -39,6 +41,8 @@ No customer API key belongs in the hosted service environment. The consent front
 8. Execute the ledger acceptance cases below through both API-key and delegated OAuth clients. Prepare the final release evidence and review production configuration before deploying publicly.
 
 For Coolify, use this separate MCP repository as the build context with the Dockerfile builder and port 3100. Supply runtime environment variables privately. Docker's health command connects internally but sends the configured public Host header; a generic localhost probe will otherwise receive a deliberate 403. Sticky sessions are unnecessary because the MCP handler is stateless.
+
+Coolify's application domain and the OAuth resource are different settings. For `mcp.glympt.com`, set **Ports exposes** to `3100` and the Coolify **Domain** to `https://mcp.glympt.com:3100`, routing the whole hostname. Set `GLYMPT_MCP_RESOURCE_URL` and backend `MCP_RESOURCE_URL` to `https://mcp.glympt.com/mcp`, without the internal port. Putting `/mcp` in Coolify's Domain creates a path-prefix/strip-prefix route and leaves discovery and health paths inaccessible. Keep `/mcp`, `/health` and `/.well-known/*` intact through the proxy.
 
 The reverse proxy must preserve public Host and forward only trusted client-IP headers. Configure the backend's existing `TRUST_PROXY`/`TRUSTED_PROXY_IPS` narrowly for its actual proxy. Authenticated gateway traffic has a separate ceiling, while the paid account allowance is shared across keys and delegated tools, including polling. Do not solve a proxy problem by disabling paid rate limits.
 
@@ -87,3 +91,7 @@ MCP logs only request ID, method, path, status and duration. Backend request log
 To disable hosted access, stop the MCP service and set backend `MCP_ENABLED=false`; retain migrations and ledger/grant history. Do not reverse additive database migrations during rollback. Delegations are limited to 60 seconds and accepted work continues under the existing billing/refund rules. Rotate shared gateway and backend signing secrets together only when necessary, and verify how the new values affect existing clients.
 
 Publish client compatibility claims or a registry listing only after actual host and paid-ledger verification. A registry entry is not a substitute for those checks.
+
+## Production CIMD token validation fix — 2026-10-04
+
+A production Codex login and refresh initially succeeded while MCP discovery returned 401. The gateway configuration matched. The backend token exchange used the original OAuth options instead of the provider’s initialized options, omitting the companion client-discovery extensions. The exchange now validates with `provider.options`. The extension-backed real-database regression fails with the old code and passes with the fix; all ten OAuth cases pass. The user deployed the fix. Modern/legacy hosted discovery and refresh rotation now pass, and Codex settings disconnect rejects access (401) and refresh (`invalid_grant`). Detailed acceptance artifacts remain in the private application workspace.

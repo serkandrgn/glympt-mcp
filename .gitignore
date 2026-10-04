@@ -5,3 +5,6 @@ dist/
 !.env.example
 !.env.hosted.example
 *.log
+*.tgz
+.mcpregistry_*
+.mcp_publisher_token

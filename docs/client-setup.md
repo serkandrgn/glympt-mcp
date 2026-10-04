@@ -1,57 +1,79 @@
 # Client setup and verification
 
-Updated 2026-10-04. These are setup instructions, not a claim that each application has passed testing against Glympt. Use the staging URL until the release checklist passes.
+Updated 2026-10-04. These are setup instructions, not a claim that each application has passed testing against Glympt. The public beta endpoint is https://mcp.glympt.com/mcp. Use a staging workspace for chargeable evaluation.
 
-## Developer clients
+## Developer clients: npm stdio
 
-Build `mcp/` with `pnpm install --frozen-lockfile && pnpm build`. Create a scoped API key for a paid Glympt workspace. Save it privately in an environment file outside the checkout:
+Requires Node.js 22 or newer and a scoped API key for an API-enabled paid Glympt workspace. No source checkout is needed. In the stdio server's private process environment set `GLYMPT_API_KEY`, then use:
 
-```dotenv
-GLYMPT_API_KEY=tk_live_replace_with_your_key
-# Optional: use the staging API while testing.
-GLYMPT_API_BASE_URL=https://api-staging.example.com
+```sh
+npx --yes @glympt/mcp@0.1.0
 ```
 
-Use absolute paths. Node's `--env-file` avoids putting the actual credential in the client config or CLI history. The stdio server needs outbound HTTPS to the selected API origin.
+`GLYMPT_API_BASE_URL` defaults to `https://api.glympt.com`. The server does not automatically load `.env`. Never put a real API key in source control, shared configuration or chat prompts. Free CSV trial credits do not grant MCP/API access.
 
 ### Codex
 
-The installed Codex CLI supports the following stdio launch form; inspected with `codex mcp add --help`:
+To use npx, merge this table into your private `~/.codex/config.toml` and start Codex with `GLYMPT_API_KEY` in its environment. `env_vars` explicitly forwards the key to the adapter:
 
-```sh
-codex mcp add glympt -- node --env-file=/absolute/private/glympt.env /absolute/path/to/mcp/dist/stdio.js
+```toml
+[mcp_servers.glympt]
+command = "npx"
+args = ["--yes", "@glympt/mcp@0.1.0"]
+env_vars = ["GLYMPT_API_KEY"]
 ```
 
-Restart or reload the client and inspect the connected server's tools. Hosted OAuth can instead use `codex mcp add glympt-hosted --url https://mcp-staging.example.com/mcp`, then the client's login flow. Do not supply a dashboard API key as a hosted OAuth bearer token.
+See [Codex's official MCP configuration guide](https://learn.chatgpt.com/docs/extend/mcp).
 
-### Cursor
+Alternatively, install once in a private directory and keep the credential in a private environment file:
 
-Add a stdio entry to `.cursor/mcp.json` or the global `~/.cursor/mcp.json`:
+```sh
+npm install --prefix /absolute/private/glympt-adapter @glympt/mcp@0.1.0
+codex mcp add glympt -- node --env-file=/absolute/private/glympt.env /absolute/private/glympt-adapter/node_modules/@glympt/mcp/dist/stdio.js
+```
+
+The environment-file template is:
+
+```dotenv
+GLYMPT_API_KEY=tk_live_replace_with_your_key
+GLYMPT_API_BASE_URL=https://api.glympt.com
+```
+
+Use absolute paths and restrict the file to your user. Hosted OAuth can instead use `codex mcp add glympt-hosted --url https://mcp.glympt.com/mcp`, then the client's login flow. A dashboard API key cannot be used as a hosted OAuth bearer token.
+
+### Cursor and other JSON-configured stdio clients
+
+Merge this entry into your **private** global MCP configuration, such as `~/.cursor/mcp.json`. Do not commit the real key in a project's `.cursor/mcp.json`.
 
 ```json
 {
   "mcpServers": {
     "glympt": {
-      "type": "stdio",
-      "command": "node",
-      "args": [
-        "--env-file=/absolute/private/glympt.env",
-        "/absolute/path/to/mcp/dist/stdio.js"
-      ]
+      "command": "npx",
+      "args": ["--yes", "@glympt/mcp@0.1.0"],
+      "env": {
+        "GLYMPT_API_KEY": "tk_live_replace_with_your_key"
+      }
     }
   }
 }
 ```
 
-Cursor also supports a remote URL entry with OAuth. Configure the hosted `/mcp` URL and connect through Glympt's consent screen. See [Cursor's MCP documentation](https://prod.cursor.com/docs/mcp).
+If the client inherits the key from its private process environment, omit the `env` block. Restart or reload the client and inspect its tools. Cursor also supports the hosted URL with OAuth; see [Cursor's MCP documentation](https://cursor.com/docs/mcp).
 
 ### Claude Code
 
+With `GLYMPT_API_KEY` available in the client process's private environment:
+
 ```sh
-claude mcp add --transport stdio glympt -- node --env-file=/absolute/private/glympt.env /absolute/path/to/mcp/dist/stdio.js
+claude mcp add --transport stdio glympt -- npx --yes @glympt/mcp@0.1.0
 ```
 
-For hosted OAuth, use `claude mcp add --transport http glympt-hosted https://mcp-staging.example.com/mcp`, then authenticate through `/mcp`. The `--` separates client flags from the server command. See [Claude Code's MCP documentation](https://code.claude.com/docs/en/mcp).
+For hosted OAuth use `claude mcp add --transport http glympt-hosted https://mcp.glympt.com/mcp`, then authenticate through `/mcp`. The `--` separates client flags from the server command. Actual Claude Code CLI verification remains pending; see [Claude Code's MCP documentation](https://code.claude.com/docs/en/mcp).
+
+### Source development
+
+The repository still supports `pnpm install --frozen-lockfile`, `pnpm build`, and `node --env-file=/absolute/private/glympt.env /absolute/path/to/mcp/dist/stdio.js` for development. The hosted service continues to use its separate Docker build and OAuth configuration.
 
 ## Hosted clients
 
@@ -59,7 +81,7 @@ The hosted service must be reachable through public HTTPS. Each user signs into 
 
 ### ChatGPT
 
-Enable Developer mode under Settings → Security and login, where account/workspace policy permits. Open ChatGPT Plugins, add a connection and enter the full hosted MCP URL. Complete Glympt sign-in, workspace selection and consent, then inspect the discovered tools and enable the connection in a new conversation. Refresh connection metadata after tool changes. These steps follow [OpenAI's connection and testing guide](https://developers.openai.com/plugins/deploy/connect-chatgpt).
+Enable Developer mode under Settings → Security and login, where account/workspace policy permits. Open ChatGPT Plugins → Add → Create custom MCP server, enter the full hosted MCP URL and choose OAuth. Automatic discovery selects CIMD; no manual client ID or secret is needed. Complete Glympt sign-in, workspace selection and consent, then inspect the discovered tools and enable the connection in a new conversation. Refresh connection metadata after tool changes. These steps follow [OpenAI's connection and testing guide](https://developers.openai.com/plugins/deploy/connect-chatgpt).
 
 The authorization server supports published client metadata (CIMD) and dynamic registration. Use the client identity and exact callback discovered by the host; do not guess callback URLs or broadly wildcard them. See [OpenAI's OAuth requirements](https://developers.openai.com/plugins/build/auth).
 
@@ -69,15 +91,15 @@ Open Customize → Connectors → Add custom connector, enter the public `/mcp` 
 
 ## Compatibility matrix
 
-| Client                               | Intended connection          | Current evidence                                                                |
-| ------------------------------------ | ---------------------------- | ------------------------------------------------------------------------------- |
-| Official SDK v2, protocol 2026-07-28 | stdio and stateless HTTP     | Local discovery and calls pass for all 14 tools                                 |
-| Official SDK, protocol 2025-11-25    | stdio and compatibility HTTP | Local discovery and calls pass for all 14 tools                                 |
-| Codex                                | API-key stdio; hosted OAuth  | CLI syntax inspected; actual connection pending                                 |
-| Cursor                               | API-key stdio; hosted OAuth  | Official configuration documented; actual connection pending                    |
-| Claude Code                          | API-key stdio; hosted OAuth  | Official configuration documented; actual connection pending                    |
-| ChatGPT                              | Hosted OAuth                 | Implementation and local identity tests exist; application verification pending |
-| Claude web / Desktop remote          | Hosted OAuth                 | Implementation exists; application verification pending                         |
+| Client                               | Intended connection          | Current evidence                                                                                         |
+| ------------------------------------ | ---------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Official SDK v2, protocol 2026-07-28 | stdio and stateless HTTP     | Local checks pass; production stdio invokes 14 tools; hosted discovery/usage/refresh pass                |
+| Official SDK, protocol 2025-11-25    | stdio and compatibility HTTP | Local checks pass; production stdio and hosted discovery/usage pass                                      |
+| Codex                                | API-key stdio; hosted OAuth  | codex-cli 0.160.0: production browser OAuth and actual get_usage pass; disconnect rejects access/refresh |
+| Cursor                               | API-key stdio; hosted OAuth  | Cursor desktop 3.23.12: DCR OAuth, 14 tools and actual get_usage pass                                    |
+| Claude Code                          | API-key stdio; hosted OAuth  | Official configuration documented; actual connection pending                                             |
+| ChatGPT                              | Hosted OAuth                 | ChatGPT Plus web: CIMD OAuth and actual get_usage pass on 2026-10-04                                     |
+| Claude web / Desktop remote          | Hosted OAuth                 | Claude Free web: CIMD OAuth, 14 tools and actual get_usage pass on 2026-10-04                            |
 
 Record the host version, protocol, test date, selected workspace and outcome when verifying a row. Do not change a pending row based solely on a successful SDK test.
 
@@ -94,3 +116,7 @@ Use controlled staging domains and record returned IDs, operation keys and ledge
 - “Find decision-makers' email addresses.” The product has no such tool and should explain the limitation.
 
 Disconnect the authorized client in Glympt account settings and verify its next call fails. Reconnecting should require new authorization. Do not place access tokens, API keys or raw authorization codes in evaluation reports.
+
+Actual application checks cover OAuth connection and read-only usage. All 14 enrichment/list/export workflows were exercised separately through the production API-key SDK runner; the full workflow matrix was not run inside every application.
+
+Cursor desktop 3.23.12 passed OAuth, 14-tool discovery and get_usage in Agent mode. Claude Code remains separately unverified. Temporary acceptance grants were revoked after testing.

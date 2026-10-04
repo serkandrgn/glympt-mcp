@@ -1,7 +1,41 @@
 {
   "name": "@glympt/mcp",
   "version": "0.1.0",
-  "private": true,
+  "license": "MIT",
+  "description": "Glympt MCP adapter for domain technology enrichment, filtered prospecting, saved lists and CSV exports.",
+  "homepage": "https://glympt.com/mcp",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/serkandrgn/glympt-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/serkandrgn/glympt-mcp/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "glympt",
+    "technographics",
+    "enrichment",
+    "prospecting"
+  ],
+  "mcpName": "io.github.serkandrgn/glympt",
+  "bin": {
+    "glympt-mcp": "dist/stdio.js"
+  },
+  "files": [
+    "LICENSE",
+    "dist/stdio.js",
+    "dist/server.js",
+    "dist/api-client.js",
+    "dist/config.js",
+    "docs/client-setup.md",
+    "server.json"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -12,6 +46,9 @@
     "dev:http": "tsx src/http.ts",
     "dev:hosted": "tsx src/hosted.ts",
     "build": "tsc -p tsconfig.json",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm run check && npm run lint && npm test",
+    "test:package": "node scripts/verify-package.mjs",
     "check": "tsc --noEmit -p tsconfig.test.json",
     "lint": "eslint src test",
     "format": "prettier --write .",

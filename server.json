@@ -1,0 +1,42 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.serkandrgn/glympt",
+  "title": "Glympt",
+  "description": "Paid domain technology enrichment, prospect search, bulk enrichment, saved lists and CSV exports.",
+  "version": "0.1.0",
+  "websiteUrl": "https://glympt.com/mcp",
+  "repository": {
+    "url": "https://github.com/serkandrgn/glympt-mcp",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@glympt/mcp",
+      "version": "0.1.0",
+      "runtimeHint": "npx",
+      "transport": { "type": "stdio" },
+      "environmentVariables": [
+        {
+          "name": "GLYMPT_API_KEY",
+          "description": "Scoped API key from an API-enabled paid Glympt workspace. Create it at https://glympt.com/dashboard/user/api-keys. Free CSV trial does not grant API access.",
+          "format": "string",
+          "isRequired": true,
+          "isSecret": true
+        },
+        {
+          "name": "GLYMPT_API_BASE_URL",
+          "description": "Glympt HTTPS API origin. Uses production by default; Node.js 22 or newer is required.",
+          "format": "string",
+          "default": "https://api.glympt.com"
+        }
+      ]
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.glympt.com/mcp"
+    }
+  ]
+}
