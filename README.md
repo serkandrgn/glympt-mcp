@@ -124,7 +124,7 @@ Track acceptance in [the implementation plan](https://github.com/serkandrgn/glym
 
 ## Distribution
 
-Registry metadata is in `server.json`. See the [distribution status](https://github.com/serkandrgn/glympt-mcp/blob/main/docs/distribution.md) for verified public entries and directory submissions.
+Version 0.1.0 is live on [npm](https://www.npmjs.com/package/@glympt/mcp) and in the [official MCP Registry](https://registry.modelcontextprotocol.io/v0.1/servers/io.github.serkandrgn%2Fglympt/versions/0.1.0). Registry metadata is in `server.json`. See the [distribution status](https://github.com/serkandrgn/glympt-mcp/blob/main/docs/distribution.md) for verified public entries and directory submissions.
 
 ## License
 

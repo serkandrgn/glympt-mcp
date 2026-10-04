@@ -65,12 +65,12 @@ MCP Apps/UI, arbitrary code execution, generic HTTP-fetch tools, agent messaging
 
 ## Implementation status — 2026-10-04
 
-| Milestone                         | Source status                                                        | Acceptance status                                                                                |
-| --------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| 1. Developer connection           | Implemented                                                          | Local tests and production stdio workflows pass; actual Codex, ChatGPT and Claude web usage pass |
-| 2. Hosted OAuth and API workflows | Implemented                                                          | Isolated migrations, OAuth/workflow tests and browser consent/disconnect pass                    |
-| 3. Staging billing and clients    | Local billing/tenancy and small production API-key workflow verified | Hosted OAuth and actual Codex/ChatGPT/Claude web/Cursor usage pass                               |
-| 4. Release                        | Docker/Coolify deployment is live                                    | Hosted authorization/refresh/disconnect pass; registry publication pending                       |
+| Milestone                         | Source status                                                        | Acceptance status                                                                                                                              |
+| --------------------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Developer connection           | Implemented                                                          | Local tests and production stdio workflows pass; actual Codex, ChatGPT and Claude web usage pass                                               |
+| 2. Hosted OAuth and API workflows | Implemented                                                          | Isolated migrations, OAuth/workflow tests and browser consent/disconnect pass                                                                  |
+| 3. Staging billing and clients    | Local billing/tenancy and small production API-key workflow verified | Hosted OAuth and actual Codex/ChatGPT/Claude web/Cursor usage pass                                                                             |
+| 4. Release                        | Docker/Coolify deployment is live                                    | Hosted authorization/refresh/disconnect pass; npm and official Registry version 0.1.0 published; directory status tracked in `distribution.md` |
 
 Fourteen tools cover enrichment, polling, filtered database search, usage, saved lists and CSV snapshots. Backend contracts enforce scopes and workspace ownership. List/export operations have durable replay; list quotas serialize concurrent writes; export completion and audit commit atomically. CSV downloads use bounded authenticated base64 chunks and formula protection.
 
