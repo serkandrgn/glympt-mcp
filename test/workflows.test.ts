@@ -161,6 +161,35 @@ for (const era of ["modern", "legacy"] as const)
           ?.readOnlyHint,
         false,
       );
+    const advancedSearch = await client.callTool({
+      name: "search_domains",
+      arguments: {
+        include: ["shopify", "wordpress"],
+        matchMode: "any",
+        language: "de",
+        pageFeatures: ["hasPricingPage"],
+        hideExported: true,
+        excludeListIds: [id],
+      },
+    });
+    assert.notEqual(advancedSearch.isError, true);
+    const advancedQuery = calls.at(-1)!.url.searchParams;
+    assert.equal(advancedQuery.get("match_mode"), "any");
+    assert.equal(advancedQuery.get("language"), "de");
+    assert.equal(advancedQuery.get("page_features"), "hasPricingPage");
+    assert.equal(advancedQuery.get("hide_exported"), "true");
+    assert.equal(advancedQuery.get("exclude_list_ids"), id);
+    const incremental = await client.callTool({
+      name: "create_csv_export",
+      arguments: {
+        source: "saved_list",
+        listId: id,
+        onlyNew: true,
+        idempotencyKey: "incremental-list-export",
+      },
+    });
+    assert.notEqual(incremental.isError, true);
+    assert.equal(calls.at(-1)!.body?.onlyNew, true);
     const count = calls.length;
     const invalid = await client.callTool({
       name: "get_csv_export_chunk",

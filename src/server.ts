@@ -42,7 +42,9 @@ const filters = {
     .array(slug)
     .max(25)
     .optional()
-    .describe("Technology slugs that must be absent."),
+    .describe(
+      "Technology slugs not detected in a usable recent observation; not proof of absence.",
+    ),
   country: z
     .string()
     .regex(/^[A-Za-z]{2}$/)
@@ -60,7 +62,32 @@ const filters = {
   page: z.number().int().min(1).max(100_000).default(1),
   pageSize: z.number().int().min(1).max(100).default(25),
 };
-const searchSchema = z.strictObject(filters);
+const prospectingFilters = {
+  matchMode: z.enum(["all", "any"]).optional(),
+  language: z
+    .string()
+    .regex(/^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)
+    .max(35)
+    .optional(),
+  schemaType: z.string().trim().min(1).max(80).optional(),
+  pageFeatures: z
+    .array(
+      z.enum(["hasPricingPage", "hasDocsPage", "hasLogin", "hasCareersPage"]),
+    )
+    .max(4)
+    .optional(),
+  excludeListIds: z
+    .array(identifier)
+    .max(25)
+    .optional()
+    .describe("Owned lists to exclude; requires lists:read scope."),
+  hideExported: z.boolean().optional(),
+  domainQuery: z.string().trim().min(1).max(253).optional(),
+  category: z.string().trim().min(1).max(80).optional(),
+  technologyCountMin: z.number().int().min(1).max(100).optional(),
+  scannedWithinDays: z.number().int().min(1).max(365).optional(),
+};
+const searchSchema = z.strictObject({ ...filters, ...prospectingFilters });
 const batchResultsSchema = z.strictObject({
   batchId: identifier,
   ...filters,
@@ -96,12 +123,14 @@ const exportRequest = z.discriminatedUnion("source", [
     source: z.literal("saved_list"),
     listId: identifier,
     idempotencyKey,
+    onlyNew: z.boolean().optional(),
   }),
   z.strictObject({
     source: z.literal("domain_search"),
     idempotencyKey,
     filters: exportFilters
       .extend({
+        ...prospectingFilters,
         domainQuery: z.string().trim().min(1).max(253).optional(),
         category: z.string().trim().min(1).max(80).optional(),
         scannedWithinDays: z.number().int().min(1).max(365).optional(),
@@ -119,8 +148,13 @@ const exportToolInput = z
       .optional()
       .describe("Required only for saved_list; omit bulkUploadId and filters."),
     idempotencyKey,
+    onlyNew: z
+      .boolean()
+      .optional()
+      .describe("For saved_list only: export entries not previously exported."),
     filters: exportFilters
       .extend({
+        ...prospectingFilters,
         status: z
           .enum(["scanned", "invalid", "duplicate", "failed"])
           .optional(),
@@ -164,6 +198,23 @@ function queryFilters(input: z.output<typeof searchSchema>) {
     country_confidence_min: input.countryConfidenceMin,
     page: input.page,
     pageSize: input.pageSize,
+    ...Object.fromEntries(
+      Object.entries({
+        match_mode: input.matchMode,
+        language: input.language,
+        schema_type: input.schemaType,
+        page_features: input.pageFeatures?.join(","),
+        exclude_list_ids: input.excludeListIds?.join(","),
+        hide_exported:
+          input.hideExported === undefined
+            ? undefined
+            : String(input.hideExported),
+        q: input.domainQuery,
+        category: input.category,
+        technology_count_min: input.technologyCountMin,
+        scanned_within_days: input.scannedWithinDays,
+      }).filter(([, value]) => value !== undefined),
+    ),
   };
 }
 

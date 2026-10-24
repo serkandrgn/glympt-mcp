@@ -120,3 +120,10 @@ Disconnect the authorized client in Glympt account settings and verify its next 
 Actual application checks cover OAuth connection and read-only usage. All 14 enrichment/list/export workflows were exercised separately through the production API-key SDK runner; the full workflow matrix was not run inside every application.
 
 Cursor desktop 3.23.12 passed OAuth, 14-tool discovery and get_usage in Agent mode. Claude Code remains separately unverified. Temporary acceptance grants were revoked after testing.
+
+
+### Prospecting filters and incremental exports
+
+`search_domains` accepts `matchMode` (`all` or `any`), observed `language`, exact `schemaType`, positive `pageFeatures` (`hasPricingPage`, `hasDocsPage`, `hasLogin`, `hasCareersPage`), `domainQuery`, `category`, `technologyCountMin`, `scannedWithinDays`, `hideExported`, and `excludeListIds`. List exclusions require `lists:read` scope. Page signals require a usable recent homepage observation, defaulting to 30 days. These are observations, not verified business attributes.
+
+The same reusable filters can be passed to a `domain_search` CSV export. For a `saved_list` export, `onlyNew: true` exports list entries not included in earlier successful exports of that list. Tracking starts with exports created after this feature is enabled. Neither operation consumes additional enrichment credits; plan limits, request rates, scopes, and workspace ownership still apply.
